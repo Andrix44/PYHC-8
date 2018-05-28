@@ -1,0 +1,1 @@
+print(len([None * 16]), len([None] * 16))
