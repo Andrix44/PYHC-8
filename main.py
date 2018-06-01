@@ -2,14 +2,19 @@ import sys
 import pygame
 import time
 import chip8
+import tkinter as tk
+from tkinter import filedialog
 
 def Main():
-    romname = sys.argv[1] # Get the ROM filename from the cmd argument
-    sys8 = chip8.Chip8(romname)
+    root = tk.Tk()
+    root.withdraw()
 
-    native_display = pygame.Surface([64, 32])
+    romname = filedialog.askopenfilename()
+    sys8 = chip8.Chip8(romname) # Add check for missong ROM
+
+    native_display = pygame.Surface((64, 32))
     display_array = pygame.PixelArray(native_display)
-    pc_display = pygame.display.set_mode([640,320])
+    pc_display = pygame.display.set_mode((640,320))
 
     while True:
         pygame.event.pump()
@@ -33,6 +38,15 @@ def Main():
         sys8.key[0xf] = pressed[pygame.K_v]
 
         sys8.Cycle(sys8.key)
+        if(sys8.draw_flag == True): # Check draw_flag
+            for i in range(32):
+                for j in range(64):
+                    if(sys8.gfx[i][j]):
+                        display_array[j][i] = 0xFFFFFF
+                    else:
+                        display_array[j][i] = 0x0
+            pygame.transform.scale(native_display, (640, 320), pc_display)
+            pygame.display.update()
 
 
 if __name__ == "__main__":
