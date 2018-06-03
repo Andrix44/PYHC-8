@@ -128,7 +128,7 @@ class Chip8:
                     self.V[0xF] = False
                 self.V[VX] = (self.V[VY] - self.V[VX]) # Maybe & 0xFF
             elif(last == 0xE):
-                self.V[0xF] = (self.V[VX] >> 3)
+                self.V[0xF] = (self.V[VX] >> 7)
                 self.V[VX] *= 2
             self.pc += 2
         elif(first == 0x9):
@@ -194,13 +194,15 @@ class Chip8:
             elif(last2 == 0x29):
                 self.I = ((self.V[VX] * 0x5) & 0xFFFF) # Look into this
             elif(last2 == 0x33):
-                self.memory[self.I] = int(self.V[VX] / 100) & 0xFF
-                self.memory[self.I + 1] = int((self.V[VX] / 100) % 10) & 0xFF
-                self.memory[self.I + 2] = int(self.V[VX] % 10) & 0xFF
+                self.memory[self.I] = int(self.V[VX] / 100)
+                self.memory[self.I + 1] = int((self.V[VX] % 100) / 10)
+                self.memory[self.I + 2] = int(self.V[VX] % 10)
             elif(last2 == 0x55):
                 for i in range(VX + 1):
                     self.memory[self.I + i] = self.V[i]
+                    """ self.I += 1 """ # Not sure about this
             elif(last2 == 0x65):
                 for i in range(VX + 1):
                     self.V[i] = self.memory[self.I + i]
+                    """ self.I += 1 """ # Not sure about this
             self.pc += 2
