@@ -10,7 +10,7 @@ def Main():
     root.withdraw()
 
     romname = filedialog.askopenfilename()
-    sys8 = chip8.Chip8(romname) # Add check for missong ROM
+    sys8 = chip8.Chip8(romname) # Add check for invalid ROM
 
     native_display = pygame.Surface((64, 32))
     display_array = pygame.PixelArray(native_display)
@@ -38,7 +38,7 @@ def Main():
         sys8.key[0xf] = pressed[pygame.K_v]
 
         sys8.Cycle(sys8.key)
-        if(sys8.draw_flag == True): # Check draw_flag
+        if(sys8.draw_flag == True):
             for i in range(32):
                 for j in range(64):
                     if(sys8.gfx[i][j]):
