@@ -94,7 +94,7 @@ class Chip8:
             self.V[VX] = last2
             self.pc += 2
         elif(first == 0x7):
-            self.V[VX] = ((self.V[VX] + last2) & 0xFF) # Look into this
+            self.V[VX] = (self.V[VX] + last2)
             self.pc += 2
         elif(first == 0x8):
             if(last == 0x0):
@@ -117,7 +117,7 @@ class Chip8:
                     self.V[0xF] = True
                 else:
                     self.V[0xF] = False
-                self.V[VX] = (self.V[VX] - self.V[VY]) # Maybe & 0xFF
+                self.V[VX] = (self.V[VX] - self.V[VY])
             elif(last == 0x6):
                 self.V[0xF] = (self.V[VX] & 0b1)
                 self.V[VX] /= 2
@@ -126,7 +126,7 @@ class Chip8:
                     self.V[0xF] = True
                 else:
                     self.V[0xF] = False
-                self.V[VX] = (self.V[VY] - self.V[VX]) # Maybe & 0xFF
+                self.V[VX] = (self.V[VY] - self.V[VX])
             elif(last == 0xE):
                 self.V[0xF] = (self.V[VX] >> 7)
                 self.V[VX] *= 2
@@ -187,12 +187,12 @@ class Chip8:
                 self.sound_timer = self.V[VX]
             elif(last2 == 0x1E):
                 self.I += self.V[VX]
-                if(self.I > 0xFFFF): # Maybe 0xFFF
+                if(self.I > 0xFFF): # Maybe FFFF
                     self.V[0xF] = True
                 else:
                     self.V[0xF] = False
             elif(last2 == 0x29):
-                self.I = ((self.V[VX] * 0x5) & 0xFFFF) # Look into this
+                self.I = (self.V[VX] * 0x5)
             elif(last2 == 0x33):
                 self.memory[self.I] = int(self.V[VX] / 100)
                 self.memory[self.I + 1] = int((self.V[VX] % 100) / 10)

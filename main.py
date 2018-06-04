@@ -48,6 +48,9 @@ def Main():
             pygame.transform.scale(native_display, (640, 320), pc_display)
             pygame.display.update()
 
+        if(pressed[pygame.K_ESCAPE]):
+            sys.exit()
+
 
 if __name__ == "__main__":
     Main()
