@@ -39,9 +39,12 @@ class Chip8:
             for i in range(os.path.getsize(romname)):
                 self.memory[512 + i] = ord(rom.read(1)) # Write all bytes into the memory
 
-    def Cycle(self, key):
-        self.key = key
-        opcode = (self.memory[self.pc] << 8 | self.memory[self.pc + 1])
+    def Cycle(self):
+        try:
+            opcode = (self.memory[self.pc] << 8 | self.memory[self.pc + 1])
+        except IndexError:
+            raise Exception('Invalid ROM!')
+
         self.ExecInstr(opcode)
         if(self.delay_timer > 0):
             self.delay_timer -= 1
@@ -200,9 +203,7 @@ class Chip8:
             elif(last2 == 0x55):
                 for i in range(VX + 1):
                     self.memory[self.I + i] = self.V[i]
-                    """ self.I += 1 """ # Not sure about this
             elif(last2 == 0x65):
                 for i in range(VX + 1):
                     self.V[i] = self.memory[self.I + i]
-                    """ self.I += 1 """ # Not sure about this
             self.pc += 2

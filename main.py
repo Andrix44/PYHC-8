@@ -10,7 +10,7 @@ def Main():
     root.withdraw()
 
     romname = filedialog.askopenfilename()
-    sys8 = chip8.Chip8(romname) # Add check for invalid ROM
+    sys8 = chip8.Chip8(romname)
 
     pygame.display.set_icon(pygame.image.load('icon.bmp'))
     pygame.display.set_caption('PYHC-8')
@@ -39,8 +39,8 @@ def Main():
         sys8.key[0xe] = pressed[pygame.K_f]
         sys8.key[0xf] = pressed[pygame.K_v]
 
-        time.sleep(0.001) # This is bad
-        sys8.Cycle(sys8.key)
+        time.sleep(0.00125) # This is bad
+        sys8.Cycle()
         if(sys8.draw_flag == True):
             for i in range(32):
                 for j in range(64):
