@@ -12,6 +12,8 @@ def Main():
     romname = filedialog.askopenfilename()
     sys8 = chip8.Chip8(romname) # Add check for invalid ROM
 
+    pygame.display.set_icon(pygame.image.load('icon.bmp'))
+    pygame.display.set_caption('PYHC-8')
     native_display = pygame.Surface((64, 32))
     display_array = pygame.PixelArray(native_display)
     pc_display = pygame.display.set_mode((640,320))
@@ -37,6 +39,7 @@ def Main():
         sys8.key[0xe] = pressed[pygame.K_f]
         sys8.key[0xf] = pressed[pygame.K_v]
 
+        time.sleep(0.001) # This is bad
         sys8.Cycle(sys8.key)
         if(sys8.draw_flag == True):
             for i in range(32):
