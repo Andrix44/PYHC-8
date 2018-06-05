@@ -37,7 +37,10 @@ class Chip8:
             self.memory[i] = self.font[i]
         with open(romname, 'rb') as rom:
             for i in range(os.path.getsize(romname)):
-                self.memory[512 + i] = ord(rom.read(1)) # Write all bytes into the memory
+                try:
+                    self.memory[512 + i] = ord(rom.read(1)) # Write all bytes into the memory
+                except IndexError:
+                    raise Exception('Invalid ROM!')
 
     def Cycle(self):
         try:
