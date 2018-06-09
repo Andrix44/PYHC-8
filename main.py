@@ -7,10 +7,9 @@ import tkinter as tk
 from tkinter import filedialog
 
 
-
 class Chip8:
     memory = [0] * 4096
-    V = [0] * 16 # Registers
+    V = [0] * 16  # Registers
     I = 0
     pc = 0x200
     gfx = [[0] * 64 for i in range(32)]
@@ -20,22 +19,22 @@ class Chip8:
     sp = 0
     key = [0] * 16
 
-    font = [0xF0, 0x90, 0x90, 0x90, 0xF0, # 0
-            0x20, 0x60, 0x20, 0x20, 0x70, # 1
-            0xF0, 0x10, 0xF0, 0x80, 0xF0, # 2
-            0xF0, 0x10, 0xF0, 0x10, 0xF0, # 3
-            0x90, 0x90, 0xF0, 0x10, 0x10, # 4
-            0xF0, 0x80, 0xF0, 0x10, 0xF0, # 5
-            0xF0, 0x80, 0xF0, 0x90, 0xF0, # 6
-            0xF0, 0x10, 0x20, 0x40, 0x40, # 7
-            0xF0, 0x90, 0xF0, 0x90, 0xF0, # 8
-            0xF0, 0x90, 0xF0, 0x10, 0xF0, # 9
-            0xF0, 0x90, 0xF0, 0x90, 0x90, # A
-            0xE0, 0x90, 0xE0, 0x90, 0xE0, # B
-            0xF0, 0x80, 0x80, 0x80, 0xF0, # C
-            0xE0, 0x90, 0x90, 0x90, 0xE0, # D
-            0xF0, 0x80, 0xF0, 0x80, 0xF0, # E
-            0xF0, 0x80, 0xF0, 0x80, 0x80] # F
+    font = [0xF0, 0x90, 0x90, 0x90, 0xF0,  # 0
+            0x20, 0x60, 0x20, 0x20, 0x70,  # 1
+            0xF0, 0x10, 0xF0, 0x80, 0xF0,  # 2
+            0xF0, 0x10, 0xF0, 0x10, 0xF0,  # 3
+            0x90, 0x90, 0xF0, 0x10, 0x10,  # 4
+            0xF0, 0x80, 0xF0, 0x10, 0xF0,  # 5
+            0xF0, 0x80, 0xF0, 0x90, 0xF0,  # 6
+            0xF0, 0x10, 0x20, 0x40, 0x40,  # 7
+            0xF0, 0x90, 0xF0, 0x90, 0xF0,  # 8
+            0xF0, 0x90, 0xF0, 0x10, 0xF0,  # 9
+            0xF0, 0x90, 0xF0, 0x90, 0x90,  # A
+            0xE0, 0x90, 0xE0, 0x90, 0xE0,  # B
+            0xF0, 0x80, 0x80, 0x80, 0xF0,  # C
+            0xE0, 0x90, 0x90, 0x90, 0xE0,  # D
+            0xF0, 0x80, 0xF0, 0x80, 0xF0,  # E
+            0xF0, 0x80, 0xF0, 0x80, 0x80]  # F
 
     def __init__(self, romname):
         for i in range(80):
@@ -43,7 +42,7 @@ class Chip8:
         with open(romname, 'rb') as rom:
             for i in range(os.path.getsize(romname)):
                 try:
-                    self.memory[512 + i] = ord(rom.read(1)) # Write all bytes into the memory
+                    self.memory[512 + i] = ord(rom.read(1))  # Write ROM to the memory
                 except IndexError:
                     raise Exception('Invalid ROM!')
 
@@ -154,7 +153,7 @@ class Chip8:
         elif(first == 0xC):
             self.V[VX] = (random.randrange(0, 255) & last2)
             self.pc += 2
-        elif(first == 0xD):
+        elif(first == 0xD):  # Draw
             x = self.V[VX]
             y = self.V[VY]
             self.V[0XF] = False
@@ -170,12 +169,12 @@ class Chip8:
             self.pc += 2
         elif(first == 0xE):
             if(last2 == 0x9E):
-                if(self.key[self.V[VX]] == True):
+                if(self.key[self.V[VX]]):
                     self.pc += 4
                 else:
                     self.pc += 2
             if(last2 == 0xA1):
-                if(self.key[self.V[VX]] == False):
+                if(not self.key[self.V[VX]]):
                     self.pc += 4
                 else:
                     self.pc += 2
@@ -185,7 +184,7 @@ class Chip8:
             elif(last2 == 0x0A):
                 pressed = False
                 for i in range(16):
-                    if(self.key[i] == True):
+                    if(self.key[i]):
                         pressed = True
                         self.V[VX] = i
                 if(not pressed):
@@ -196,7 +195,7 @@ class Chip8:
                 self.sound_timer = self.V[VX]
             elif(last2 == 0x1E):
                 self.I += self.V[VX]
-                if(self.I > 0xFFF): # Maybe FFFF
+                if(self.I > 0xFFF):  # Maybe FFFF
                     self.V[0xF] = True
                 else:
                     self.V[0xF] = False
@@ -214,6 +213,7 @@ class Chip8:
                     self.V[i] = self.memory[self.I + i]
             self.pc += 2
 
+
 def Main():
     root = tk.Tk()
     root.withdraw()
@@ -225,9 +225,11 @@ def Main():
     pygame.display.set_caption('PYHC-8')
     native_display = pygame.Surface((64, 32))
     display_array = pygame.PixelArray(native_display)
-    pc_display = pygame.display.set_mode((640,320))
+    pc_display = pygame.display.set_mode((640, 320))
 
     while True:
+        """ prev_time = time.time() """
+
         pygame.event.pump()
         pressed = pygame.key.get_pressed()
 
@@ -248,7 +250,7 @@ def Main():
         sys8.key[0xe] = pressed[pygame.K_f]
         sys8.key[0xf] = pressed[pygame.K_v]
 
-        time.sleep(0.00125) # This is bad
+        time.sleep(0.00125)  # This is bad
         sys8.Cycle()
 
         for i in range(32):
@@ -262,6 +264,11 @@ def Main():
 
         if(pressed[pygame.K_ESCAPE]):
             sys.exit()
+
+        """ curr_time = time.time()  # Fix this sometime
+        if((curr_time - prev_time) < 0.0166666666666667):
+            time.sleep(0.0166666666666667 - (curr_time - prev_time))
+            print(0.0166666666666667 - (curr_time - prev_time)) """
 
 
 if __name__ == "__main__":
