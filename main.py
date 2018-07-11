@@ -1,4 +1,7 @@
+import ctypes
+import hashlib
 import os
+import pickle
 import pygame
 import random
 import sys
@@ -71,7 +74,7 @@ class Chip8:
             self.V[i] = int(self.V[i])
 
         if(first == 0x0):
-            if(last3 == 0x0E0):
+            if(last3 == 0x0E0):  # Clear the screen
                 self.gfx = [[0] * 64 for i in range(36)]
             elif(last3 == 0x0EE):
                 self.sp -= 1
@@ -214,12 +217,20 @@ class Chip8:
             self.pc += 2
 
 
+def HashRom(romname):
+    with open(romname, 'rb') as rom:
+        md5 = hashlib.new('md5')
+        md5.update(rom.read())
+        return(md5.hexdigest())
+
+
 def Main():
     root = tk.Tk()
     root.withdraw()
 
     romname = filedialog.askopenfilename()
     sys8 = Chip8(romname)
+    romhash = HashRom(romname)
 
     pygame.display.set_icon(pygame.image.load('icon.bmp'))
     pygame.display.set_caption('PYHC-8')
@@ -262,6 +273,11 @@ def Main():
         pygame.transform.scale(native_display, (640, 320), pc_display)
         pygame.display.update()
 
+        if(pressed[pygame.K_F1]):
+            LoadState(romhash, sys8)
+        if(pressed[pygame.K_F3]):
+            SaveState(romhash, sys8)
+
         if(pressed[pygame.K_ESCAPE]):
             sys.exit()
 
@@ -269,6 +285,43 @@ def Main():
         if((curr_time - prev_time) < 0.0166666666666667):
             time.sleep(0.0166666666666667 - (curr_time - prev_time))
             print(0.0166666666666667 - (curr_time - prev_time)) """
+
+
+def SaveState(romhash, sys8):
+    V = sys8.V
+    I = sys8.I
+    pc = sys8.pc
+    gfx = sys8.gfx
+    delay_timer = sys8.delay_timer
+    sound_timer = sys8.sound_timer
+    stack = sys8.stack
+    sp = sys8.sp
+    key = sys8.key
+
+    data = [romhash, V, I, pc, gfx, delay_timer,
+            sound_timer, stack, sp, key]
+
+    with open('SaveState', 'wb') as statefile:
+        pickle.dump(data, statefile)
+
+
+def LoadState(romhash, sys8):
+    with open('SaveState', 'rb') as statefile:
+        data = pickle.load(statefile)
+
+        if(romhash != data[0]):
+            ctypes.windll.user32.MessageBoxW(0, "The savestate that you tried to load is from another game!", "Error", 0)
+            return
+
+        sys8.V = data[1]
+        sys8.I = data[2]
+        sys8.pc = data[3]
+        sys8.gfx = data[4]
+        sys8.delay_timer = data[5]
+        sys8.sound_timer = data[6]
+        sys8.stack = data[7]
+        sys8.sp = data[8]
+        sys8.key = data[9]
 
 
 if __name__ == "__main__":
