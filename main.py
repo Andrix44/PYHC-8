@@ -239,8 +239,6 @@ def Main():
     pc_display = pygame.display.set_mode((640, 320))
 
     while True:
-        """ prev_time = time.time() """
-
         pygame.event.pump()
         pressed = pygame.key.get_pressed()
 
@@ -261,7 +259,7 @@ def Main():
         sys8.key[0xe] = pressed[pygame.K_f]
         sys8.key[0xf] = pressed[pygame.K_v]
 
-        time.sleep(0.00125)  # This is bad
+        time.sleep(0.002)  # ~500Hz
         sys8.Cycle()
 
         for i in range(32):
@@ -280,11 +278,6 @@ def Main():
 
         if(pressed[pygame.K_ESCAPE]):
             sys.exit()
-
-        """ curr_time = time.time()  # Fix this sometime
-        if((curr_time - prev_time) < 0.0166666666666667):
-            time.sleep(0.0166666666666667 - (curr_time - prev_time))
-            print(0.0166666666666667 - (curr_time - prev_time)) """
 
 
 def SaveState(romhash, sys8):
