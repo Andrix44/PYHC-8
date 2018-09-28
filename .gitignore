@@ -109,3 +109,4 @@ venv.bak/
 PYHC-8.pyproj
 PYHC-8.sln
 SaveState
+*.pyperf

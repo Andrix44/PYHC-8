@@ -22,6 +22,8 @@ class Chip8:
     sp = 0
     key = [0] * 16
 
+    draw = False
+
     font = [0xF0, 0x90, 0x90, 0x90, 0xF0,  # 0
             0x20, 0x60, 0x20, 0x20, 0x70,  # 1
             0xF0, 0x10, 0xF0, 0x80, 0xF0,  # 2
@@ -157,6 +159,7 @@ class Chip8:
             self.V[VX] = (random.randrange(0, 255) & last2)
             self.pc += 2
         elif(first == 0xD):  # Draw
+            self.draw = True
             x = self.V[VX]
             y = self.V[VY]
             self.V[0XF] = False
@@ -262,14 +265,16 @@ def Main():
         time.sleep(0.002)  # ~500Hz
         sys8.Cycle()
 
-        for i in range(32):
-            for j in range(64):
-                if(sys8.gfx[i][j]):
-                    display_array[j][i] = 0xFFFFFF
-                else:
-                    display_array[j][i] = 0x0
-        pygame.transform.scale(native_display, (640, 320), pc_display)
-        pygame.display.update()
+        if(sys8.draw):
+            for i in range(32):
+                for j in range(64):
+                    if(sys8.gfx[i][j]):
+                        display_array[j][i] = 0xFFFFFF # White color
+                    else:
+                        display_array[j][i] = 0x0
+            pygame.transform.scale(native_display, (640, 320), pc_display)
+            pygame.display.update()
+            sys8.draw = False
 
         if(pressed[pygame.K_F1]):
             LoadState(romhash, sys8)
