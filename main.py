@@ -2,17 +2,35 @@ import ctypes
 import hashlib
 import os
 import pickle
-import pygame
 import random
 import sys
+import subprocess
 import time
-import tkinter as tk
-from tkinter import filedialog
+
+try:
+    import PyQt5.QtCore as QtCore
+    import PyQt5.QtGui as QtGui
+    import PyQt5.QtWidgets as QtWidgets
+except:
+    subprocess.call([sys.executable, '-m', 'pip', 'install', 'PyQt5'])
+    import PyQt5.QtCore as QtCore
+    import PyQt5.QtGui as QtGui
+    import PyQt5.QtWidgets as QtWidgets
+
+if(sys.version.startswith('3.7')):
+    print('Please use Python 3.6.x, as 3.7 is broken with the keyboard module.')
+    sys.exit(1)
+
+try:
+    import keyboard
+except:
+    subprocess.call([sys.executable, '-m', 'pip', 'install', 'keyboard'])
+    import keyboard
 
 
 class Chip8:
     memory = [0] * 4096
-    V = [0] * 16  # Registers
+    V = [0] * 16
     I = 0
     pc = 0x200
     gfx = [[0] * 64 for i in range(32)]
@@ -20,7 +38,9 @@ class Chip8:
     sound_timer = 0
     stack = [0] * 16
     sp = 0
-    key = [0] * 16
+
+    draw = False
+    locked = True
 
     draw = False
 
@@ -40,6 +60,11 @@ class Chip8:
             0xE0, 0x90, 0x90, 0x90, 0xE0,  # D
             0xF0, 0x80, 0xF0, 0x80, 0xF0,  # E
             0xF0, 0x80, 0xF0, 0x80, 0x80]  # F
+
+    keymap = {0: 'x', 1: '1', 2: '2', 3: '3',
+              4: 'q', 5: 'w', 6: 'e', 7: 'a',
+              8: 's', 9: 'd', 10: 'z', 11: 'c',
+              12: '4', 13: 'r', 14: 'f', 15: 'v'}
 
     def __init__(self, romname):
         for i in range(80):
@@ -173,14 +198,14 @@ class Chip8:
                             self.V[0xF] = True
                         self.gfx[final_y][final_x] ^= 1
             self.pc += 2
-        elif(first == 0xE):
+        elif(first == 0xE): # Slowest part of the code, the keyboard module is not really efficient
             if(last2 == 0x9E):
-                if(self.key[self.V[VX]]):
+                if(keyboard.is_pressed(self.keymap[self.V[VX]]) or keyboard.is_pressed('z')): # Support more keyboard layouts
                     self.pc += 4
                 else:
                     self.pc += 2
             if(last2 == 0xA1):
-                if(not self.key[self.V[VX]]):
+                if not (keyboard.is_pressed(self.keymap[self.V[VX]]) or keyboard.is_pressed('z')):
                     self.pc += 4
                 else:
                     self.pc += 2
@@ -188,13 +213,10 @@ class Chip8:
             if(last2 == 0x07):
                 self.V[VX] = self.delay_timer
             elif(last2 == 0x0A):
-                pressed = False
-                for i in range(16):
-                    if(self.key[i]):
-                        pressed = True
-                        self.V[VX] = i
-                if(not pressed):
-                    return
+                while(self.locked):
+                    time.sleep(0.000001)
+                self.V[VX] = self.keypress
+                self.locked = True
             elif(last2 == 0x15):
                 self.delay_timer = self.V[VX]
             elif(last2 == 0x18):
@@ -219,108 +241,177 @@ class Chip8:
                     self.V[i] = self.memory[self.I + i]
             self.pc += 2
 
+    def SaveState(self):
+        ui.core.locked = True
+        romhash = Util.HashRom(ui.core.romname)
+        V = self.V
+        I = self.I
+        pc = self.pc
+        gfx = self.gfx
+        delay_timer = self.delay_timer
+        sound_timer = self.sound_timer
+        stack = self.stack
+        sp = self.sp
+        data = [romhash, V, I, pc, gfx, delay_timer,
+                sound_timer, stack, sp]
+        with open('SaveState', 'wb') as statefile:
+            pickle.dump(data, statefile)
+        ui.core.locked = False
 
-def HashRom(romname):
-    with open(romname, 'rb') as rom:
-        md5 = hashlib.new('md5')
-        md5.update(rom.read())
-        return(md5.hexdigest())
+    def LoadState(self):
+        ui.core.locked = True
+        romhash = Util.HashRom(ui.core.romname)
+        with open('SaveState', 'rb') as statefile:
+            data = pickle.load(statefile)
+            if(romhash != data[0]):
+                ctypes.windll.user32.MessageBoxW(0, "The savestate that you tried to load is from another game!", "Error", 0)
+                ui.core.locked = False
+                return
+            self.V = data[1]
+            self.I = data[2]
+            self.pc = data[3]
+            self.gfx = data[4]
+            self.delay_timer = data[5]
+            self.sound_timer = data[6]
+            self.stack = data[7]
+            self.sp = data[8]
+        ui.core.locked = False
 
+    def KeyAction(self, event):
+        if(event.name == 'f1'):
+            self.LoadState()
 
-def Main():
-    root = tk.Tk()
-    root.withdraw()
+        elif(event.name == 'f3'):
+            self.SaveState()
 
-    romname = filedialog.askopenfilename()
-    sys8 = Chip8(romname)
-    romhash = HashRom(romname)
-
-    pygame.display.set_icon(pygame.image.load('icon.bmp'))
-    pygame.display.set_caption('PYHC-8')
-    native_display = pygame.Surface((64, 32))
-    display_array = pygame.PixelArray(native_display)
-    pc_display = pygame.display.set_mode((640, 320))
-
-    while True:
-        pygame.event.pump()
-        pressed = pygame.key.get_pressed()
-
-        sys8.key[0x0] = pressed[pygame.K_x]
-        sys8.key[0x1] = pressed[pygame.K_1]
-        sys8.key[0x2] = pressed[pygame.K_2]
-        sys8.key[0x3] = pressed[pygame.K_3]
-        sys8.key[0x4] = pressed[pygame.K_q]
-        sys8.key[0x5] = pressed[pygame.K_w]
-        sys8.key[0x6] = pressed[pygame.K_e]
-        sys8.key[0x7] = pressed[pygame.K_a]
-        sys8.key[0x8] = pressed[pygame.K_s]
-        sys8.key[0x9] = pressed[pygame.K_d]
-        sys8.key[0xa] = pressed[pygame.K_z]
-        sys8.key[0xb] = pressed[pygame.K_c]
-        sys8.key[0xc] = pressed[pygame.K_4]
-        sys8.key[0xd] = pressed[pygame.K_r]
-        sys8.key[0xe] = pressed[pygame.K_f]
-        sys8.key[0xf] = pressed[pygame.K_v]
-
-        time.sleep(0.002)  # ~500Hz
-        sys8.Cycle()
-
-        if(sys8.draw):
-            for i in range(32):
-                for j in range(64):
-                    if(sys8.gfx[i][j]):
-                        display_array[j][i] = 0xFFFFFF # White color
-                    else:
-                        display_array[j][i] = 0x0
-            pygame.transform.scale(native_display, (640, 320), pc_display)
-            pygame.display.update()
-            sys8.draw = False
-
-        if(pressed[pygame.K_F1]):
-            LoadState(romhash, sys8)
-        if(pressed[pygame.K_F3]):
-            SaveState(romhash, sys8)
-
-        if(pressed[pygame.K_ESCAPE]):
-            sys.exit()
+        else:
+            if(event.name == 'x'): self.keypress = 0
+            if(event.name == '1'): self.keypress = 1
+            if(event.name == '2'): self.keypress = 2
+            if(event.name == '3'): self.keypress = 3
+            if(event.name == 'q'): self.keypress = 4
+            if(event.name == 'w'): self.keypress = 5
+            if(event.name == 'e'): self.keypress = 6
+            if(event.name == 'a'): self.keypress = 7
+            if(event.name == 's'): self.keypress = 8
+            if(event.name == 'd'): self.keypress = 9
+            if(event.name == 'z'): self.keypress = 10
+            if(event.name == 'y'): self.keypress = 10 # Some keyboard layouts have Z and Y mixed
+            if(event.name == 'c'): self.keypress = 11
+            if(event.name == '4'): self.keypress = 12
+            if(event.name == 'r'): self.keypress = 13
+            if(event.name == 'f'): self.keypress = 14
+            if(event.name == 'v'): self.keypress = 15
+            self.locked = False
 
 
-def SaveState(romhash, sys8):
-    V = sys8.V
-    I = sys8.I
-    pc = sys8.pc
-    gfx = sys8.gfx
-    delay_timer = sys8.delay_timer
-    sound_timer = sys8.sound_timer
-    stack = sys8.stack
-    sp = sys8.sp
-    key = sys8.key
+class MainWindow(QtWidgets.QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.InitUI()
 
-    data = [romhash, V, I, pc, gfx, delay_timer,
-            sound_timer, stack, sp, key]
+    def InitUI(self):
+        self.core = EmuCore()
+        self.emu_thread = QtCore.QThread()
+        self.core.moveToThread(self.emu_thread)
 
-    with open('SaveState', 'wb') as statefile:
-        pickle.dump(data, statefile)
+        self.open_act = QtWidgets.QAction('Open ROM', self)
+        self.open_act.triggered.connect(Util.Launch)
+
+        exit_act = QtWidgets.QAction('Exit', self)
+        exit_act.triggered.connect(self.emu_thread.quit)
+        exit_act.triggered.connect(QtWidgets.qApp.quit)
+
+        """ self.save_act = QtWidgets.QAction('Save state', self)
+        self.save_act.triggered.connect(self.core.sys8.SaveState)
+        self.save_act.setEnabled(False)
+
+        self.load_act = QtWidgets.QAction('Load state', self)
+        self.load_act.triggered.connect(self.core.sys8.LoadState)
+        self.load_act.setEnabled(False) """
+
+        menubar = self.menuBar()
+        filemenu = menubar.addMenu('File')
+        filemenu.addAction(self.open_act)
+        filemenu.addAction(exit_act)
+        """ emumenu = menubar.addMenu('Emulation')
+        emumenu.addAction(self.save_act)
+        emumenu.addAction(self.load_act) """
+
+        self.native = QtGui.QBitmap(64, 32)
+        self.native.fill(QtCore.Qt.color1)
+        self.scaled = QtWidgets.QLabel(self)
+        self.scaled.setPixmap(self.native.scaled(1280, 640, QtCore.Qt.KeepAspectRatio))
+        self.setCentralWidget(self.scaled)
+
+        self.painter = QtGui.QPainter(self.native)
+        self.painter.setPen(QtCore.Qt.color0)
+
+        self.setGeometry(320, 210, 1280, 660) # Improve this later
+        self.setWindowTitle('PYHC-8')
+        self.setWindowIcon(QtGui.QIcon('icon.bmp'))
+        self.show()
+
+        self.setFocusPolicy(QtCore.Qt.StrongFocus)
+
+    @QtCore.pyqtSlot(list)
+    def Draw(self, gfx):
+        self.native.fill(QtCore.Qt.color1)
+        for i in range(32):
+            for j in range(64):
+                if(gfx[i][j]):
+                    self.painter.drawPoint(j, i)
+
+        self.scaled.setPixmap(ui.native.scaled(1280, 640))
+        self.scaled.repaint()
+        return
 
 
-def LoadState(romhash, sys8):
-    with open('SaveState', 'rb') as statefile:
-        data = pickle.load(statefile)
+class Util():
+    @staticmethod
+    def HashRom(romname):
+        with open(romname, 'rb') as rom:
+            md5 = hashlib.new('md5')
+            md5.update(rom.read())
+            return(md5.hexdigest())
 
-        if(romhash != data[0]):
-            ctypes.windll.user32.MessageBoxW(0, "The savestate that you tried to load is from another game!", "Error", 0)
-            return
-
-        sys8.V = data[1]
-        sys8.I = data[2]
-        sys8.pc = data[3]
-        sys8.gfx = data[4]
-        sys8.delay_timer = data[5]
-        sys8.sound_timer = data[6]
-        sys8.stack = data[7]
-        sys8.sp = data[8]
-        sys8.key = data[9]
+    @staticmethod
+    def Launch():
+        filepath = QtWidgets.QFileDialog.getOpenFileName(None, 'Open ROM', '', 'CHIP-8 ROMS (*.*)')
+        if(filepath[0] != ''):
+            ui.core.romname = filepath[0]
+            ui.emu_thread.started.connect(ui.core.run)
+            ui.emu_thread.start()
 
 
-if __name__ == "__main__":
-    Main()
+class EmuCore(QtCore.QObject):
+    gfx_upl = QtCore.pyqtSignal(list)
+
+    def __init__(self):
+        super().__init__()
+        self.romname = ''
+        self.locked = False
+
+    def run(self):
+        self.sys8 = Chip8(self.romname)
+        self.romhash = Util.HashRom(self.romname)
+
+        ui.open_act.setEnabled(False)
+        """ ui.save_act.setEnabled(True)
+        ui.load_act.setEnabled(True) """
+
+        self.gfx_upl.connect(ui.Draw, type = QtCore.Qt.BlockingQueuedConnection)
+        keyboard.hook(self.sys8.KeyAction)
+        while True:
+            if(not self.locked):
+                #time.sleep(0.002)  # ~500Hz
+                self.sys8.Cycle()
+                if(self.sys8.draw):
+                    self.gfx_upl.emit(self.sys8.gfx)
+                    self.sys8.draw = False
+
+
+if __name__ == '__main__':
+    app = QtWidgets.QApplication(sys.argv)
+    ui = MainWindow()
+    sys.exit(app.exec_())
