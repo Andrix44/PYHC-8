@@ -27,6 +27,12 @@ except:
     subprocess.call([sys.executable, '-m', 'pip', 'install', 'keyboard'])
     import keyboard
 
+DEBUG = False
+SLEEPLEN = 0
+
+def DebugPrint(text):
+    if(DEBUG):
+        print(text)
 
 class Chip8:
     memory = [0] * 4096
@@ -98,7 +104,12 @@ class Chip8:
         VY = (opcode & 0xF0) >> 4
 
         for i in range(16):
-            self.V[i] = int(self.V[i])
+            if(not isinstance(self.V[i], int)):
+                DebugPrint('Invalid value: V[{}] = {}'.format(i, self.V[i]))
+                self.V[i] = int(self.V[i])
+            if(self.V[i] > 255):  # Catch all unexpected overflows
+                DebugPrint('Register overflow: V[{}] = {}'.format(i, self.V[i]))
+                self.V[i] -= 256
 
         if(first == 0x0):
             if(last3 == 0x0E0):  # Clear the screen
@@ -134,6 +145,9 @@ class Chip8:
             self.pc += 2
         elif(first == 0x7):
             self.V[VX] = (self.V[VX] + last2)
+            if(self.V[VX] > 255):
+                DebugPrint('Overflow in 7xxx, V[{}] = {}'.format(VX, self.V[VX]))
+                self.V[VX] -= 256
             self.pc += 2
         elif(first == 0x8):
             if(last == 0x0):
@@ -159,7 +173,7 @@ class Chip8:
                 self.V[VX] = (self.V[VX] - self.V[VY])
             elif(last == 0x6):
                 self.V[0xF] = (self.V[VX] & 0b1)
-                self.V[VX] /= 2
+                self.V[VX] = self.V[VX] >> 1
             elif(last == 0x7):
                 if(self.V[VY] > self.V[VX]):
                     self.V[0xF] = True
@@ -168,7 +182,7 @@ class Chip8:
                 self.V[VX] = (self.V[VY] - self.V[VX])
             elif(last == 0xE):
                 self.V[0xF] = (self.V[VX] >> 7)
-                self.V[VX] *= 2
+                self.V[VX] = self.V[VX] << 1
             self.pc += 2
         elif(first == 0x9):
             if(self.V[VX] != self.V[VY]):
@@ -188,19 +202,19 @@ class Chip8:
             x = self.V[VX]
             y = self.V[VY]
             self.V[0XF] = False
-            for line in range(last):
-                pixels = self.memory[self.I + line]
-                for column in range(8):
-                    final_y = ((y + line) % 32)
-                    final_x = ((x + column) % 64)
-                    if((pixels & (0b10000000 >> column)) != 0):
+            for height in range(last):
+                final_y = ((y + height) % 32)
+                pixels = self.memory[self.I + height]
+                for width in range(8):
+                    final_x = ((x + width) % 64)
+                    if((pixels & (0b10000000 >> width)) != 0):
                         if(self.gfx[final_y][final_x] == 1):
                             self.V[0xF] = True
                         self.gfx[final_y][final_x] ^= 1
             self.pc += 2
-        elif(first == 0xE): # Slowest part of the code, the keyboard module is not really efficient
+        elif(first == 0xE):  # Slowest part of the code, the keyboard module is not really efficient
             if(last2 == 0x9E):
-                if(keyboard.is_pressed(self.keymap[self.V[VX]]) or keyboard.is_pressed('z')): # Support more keyboard layouts
+                if(keyboard.is_pressed(self.keymap[self.V[VX]]) or keyboard.is_pressed('z')):  # Support more keyboard layouts
                     self.pc += 4
                 else:
                     self.pc += 2
@@ -223,12 +237,12 @@ class Chip8:
                 self.sound_timer = self.V[VX]
             elif(last2 == 0x1E):
                 self.I += self.V[VX]
-                if(self.I > 0xFFF):  # Maybe FFFF
+                if(self.I > 0xFFF):
                     self.V[0xF] = True
                 else:
                     self.V[0xF] = False
             elif(last2 == 0x29):
-                self.I = (self.V[VX] * 0x5)
+                self.I = (0x0 + self.V[VX] * 0x5)  # 0x0 is the font adress
             elif(last2 == 0x33):
                 self.memory[self.I] = int(self.V[VX] / 100)
                 self.memory[self.I + 1] = int((self.V[VX] % 100) / 10)
@@ -296,7 +310,7 @@ class Chip8:
             if(event.name == 's'): self.keypress = 8
             if(event.name == 'd'): self.keypress = 9
             if(event.name == 'z'): self.keypress = 10
-            if(event.name == 'y'): self.keypress = 10 # Some keyboard layouts have Z and Y mixed
+            if(event.name == 'y'): self.keypress = 10  # Some keyboard layouts have Z and Y mixed
             if(event.name == 'c'): self.keypress = 11
             if(event.name == '4'): self.keypress = 12
             if(event.name == 'r'): self.keypress = 13
@@ -347,7 +361,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.painter = QtGui.QPainter(self.native)
         self.painter.setPen(QtCore.Qt.color0)
 
-        self.setGeometry(320, 210, 1280, 660) # Improve this later
+        self.setGeometry(320, 210, 1280, 660)  # Improve this later
         self.setWindowTitle('PYHC-8')
         self.setWindowIcon(QtGui.QIcon('icon.bmp'))
         self.show()
@@ -404,7 +418,7 @@ class EmuCore(QtCore.QObject):
         keyboard.hook(self.sys8.KeyAction)
         while True:
             if(not self.locked):
-                #time.sleep(0.002)  # ~500Hz
+                time.sleep(SLEEPLEN)
                 self.sys8.Cycle()
                 if(self.sys8.draw):
                     self.gfx_upl.emit(self.sys8.gfx)
