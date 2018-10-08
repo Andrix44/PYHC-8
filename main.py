@@ -105,10 +105,10 @@ class Chip8:
 
         for i in range(16):
             if(not isinstance(self.V[i], int)):
-                DebugPrint('Invalid value: V[{}] = {}'.format(i, self.V[i]))
+                DebugPrint(f'Invalid value: V[{i}] = {self.V[i]}')
                 self.V[i] = int(self.V[i])
             if(self.V[i] > 255):  # Catch all unexpected overflows
-                DebugPrint('Register overflow: V[{}] = {}'.format(i, self.V[i]))
+                DebugPrint(f'Register overflow: V[{i}] = {self.V[i]}')
                 self.V[i] -= 256
 
         if(first == 0x0):
@@ -146,7 +146,7 @@ class Chip8:
         elif(first == 0x7):
             self.V[VX] = (self.V[VX] + last2)
             if(self.V[VX] > 255):
-                DebugPrint('Overflow in 7xxx, V[{}] = {}'.format(VX, self.V[VX]))
+                DebugPrint(f'Overflow in 7xxx, V[{VX}] = {self.V[VX]}')
                 self.V[VX] -= 256
             self.pc += 2
         elif(first == 0x8):
