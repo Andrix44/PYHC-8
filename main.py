@@ -28,7 +28,6 @@ except:
     import keyboard
 
 DEBUG = False
-SLEEPLEN = 0
 CLOCK = 300  # Hz, multiples of 60: 60, 120, ..., 600 are the recommended values
 REFRESH = 60  # Hz
 CYCLES_PER_FRAME = int(CLOCK / REFRESH)
