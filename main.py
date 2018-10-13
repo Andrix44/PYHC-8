@@ -254,16 +254,8 @@ class Chip8:
     def SaveState(self):
         ui.core.locked = True
         romhash = Util.HashRom(ui.core.romname)
-        V = self.V
-        I = self.I
-        pc = self.pc
-        gfx = self.gfx
-        delay_timer = self.delay_timer
-        sound_timer = self.sound_timer
-        stack = self.stack
-        sp = self.sp
-        data = [romhash, V, I, pc, gfx, delay_timer,
-                sound_timer, stack, sp]
+        data = [romhash, self.V, self.I, self.pc, self.gfx, self.delay_timer,
+                self.sound_timer, self.stack, self.sp]
         with open('SaveState', 'wb') as statefile:
             pickle.dump(data, statefile)
         ui.core.locked = False
