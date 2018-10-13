@@ -86,12 +86,7 @@ class Chip8:
             opcode = (self.memory[self.pc] << 8 | self.memory[self.pc + 1])
         except IndexError:
             raise Exception('Invalid ROM!')
-
         self.ExecInstr(opcode)
-        if(self.delay_timer > 0):
-            self.delay_timer -= 1
-        if(self.sound_timer > 0):
-            self.sound_timer -= 1
 
     def ExecInstr(self, opcode):
         first = opcode >> 12
@@ -424,6 +419,11 @@ class EmuCore(QtCore.QObject):
                     self.sys8.Cycle()
                     curr_ccl += 1
             self.gfx_upl.emit(self.sys8.gfx)
+            if(self.sys8.delay_timer > 0):
+                self.sys8.delay_timer -= 1
+            if(self.sys8.sound_timer > 0):
+                QtWidgets.QApplication.beep()
+                self.sys8.sound_timer -= 1
 
 
 if __name__ == '__main__':
