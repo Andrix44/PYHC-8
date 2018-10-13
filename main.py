@@ -29,6 +29,9 @@ except:
 
 DEBUG = False
 SLEEPLEN = 0
+CLOCK = 300  # Hz, multiples of 60: 60, 120, ..., 600 are the recommended values
+REFRESH = 60  # Hz
+CYCLES_PER_FRAME = int(CLOCK / REFRESH)
 
 def DebugPrint(text):
     if(DEBUG):
@@ -45,10 +48,7 @@ class Chip8:
     stack = [0] * 16
     sp = 0
 
-    draw = False
     locked = True
-
-    draw = False
 
     font = [0xF0, 0x90, 0x90, 0x90, 0xF0,  # 0
             0x20, 0x60, 0x20, 0x20, 0x70,  # 1
@@ -198,7 +198,6 @@ class Chip8:
             self.V[VX] = (random.randrange(0, 255) & last2)
             self.pc += 2
         elif(first == 0xD):  # Draw
-            self.draw = True
             x = self.V[VX]
             y = self.V[VY]
             self.V[0XF] = False
@@ -213,13 +212,16 @@ class Chip8:
                         self.gfx[final_y][final_x] ^= 1
             self.pc += 2
         elif(first == 0xE):  # Slowest part of the code, the keyboard module is not really efficient
+            yz_pressed = False
+            if(self.V[VX] == 10):  # Try to minimise the usage of the slow keyboard
+                yz_pressed = keyboard.is_pressed('z')
             if(last2 == 0x9E):
-                if(keyboard.is_pressed(self.keymap[self.V[VX]]) or keyboard.is_pressed('z')):  # Support more keyboard layouts
+                if(keyboard.is_pressed(self.keymap[self.V[VX]]) or yz_pressed):  # Support more keyboard layouts
                     self.pc += 4
                 else:
                     self.pc += 2
             if(last2 == 0xA1):
-                if not (keyboard.is_pressed(self.keymap[self.V[VX]]) or keyboard.is_pressed('z')):
+                if not (keyboard.is_pressed(self.keymap[self.V[VX]]) or yz_pressed):
                     self.pc += 4
                 else:
                     self.pc += 2
@@ -416,13 +418,13 @@ class EmuCore(QtCore.QObject):
 
         self.gfx_upl.connect(ui.Draw, type = QtCore.Qt.BlockingQueuedConnection)
         keyboard.hook(self.sys8.KeyAction)
-        while True:
-            if(not self.locked):
-                time.sleep(SLEEPLEN)
-                self.sys8.Cycle()
-                if(self.sys8.draw):
-                    self.gfx_upl.emit(self.sys8.gfx)
-                    self.sys8.draw = False
+        while(True):
+            curr_ccl = 0
+            while(curr_ccl < CYCLES_PER_FRAME):
+                if(not self.locked):
+                    self.sys8.Cycle()
+                    curr_ccl += 1
+            self.gfx_upl.emit(self.sys8.gfx)
 
 
 if __name__ == '__main__':
